@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layoffs Data Cleaning</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #e9ecef;
+            background-color: #121212;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        pre {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap; /* Allows wrapping */
+        }
+        .description {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        img {
+            display: block;
+            margin: 20px auto;
+            max-width: 100%; /* Makes the image responsive */
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Layoffs Data Cleaning Project</h1>
+
+        <!-- Image Section -->
+        <img src="claenig.png" alt="Layoffs Data Cleaning Visualization">
+
+        <div class="description">
+            <h2>Project Description</h2>
+            <p>
+                In this project, I performed comprehensive data cleaning on layoffs data using SQL. The process involved several key steps to ensure the data's accuracy and reliability before conducting any analysis.
+            </p>
+            <ol>
+                <li><strong>Remove Duplicates</strong>: 
+                    <ul>
+                        <li>Created a staging table (<code>layoffs_staging</code>) to duplicate the original <code>layoffs</code> table.</li>
+                        <li>Used a Common Table Expression (CTE) to identify duplicate rows based on multiple columns.</li>
+                        <li>Deleted duplicates, retaining only unique entries in a new table (<code>layoffs_staging3</code>).</li>
+                    </ul>
+                </li>
+                <li><strong>Standardize the Data</strong>:
+                    <ul>
+                        <li>Trimmed whitespace from company names to ensure consistency.</li>
+                        <li>Standardized the industry names, particularly for variations like 'Crypto'.</li>
+                        <li>Cleaned up country names by removing trailing periods.</li>
+                        <li>Converted date strings into a standardized date format.</li>
+                    </ul>
+                </li>
+                <li><strong>Handle Null Values</strong>:
+                    <ul>
+                        <li>Identified and updated null or blank values in key columns such as <code>industry</code> and <code>percentage_laid_off</code>.</li>
+                        <li>Implemented logic to fill missing values in the <code>industry</code> column based on existing entries for the same company.</li>
+                    </ul>
+                </li>
+                <li><strong>Remove Irrelevant Columns or Rows</strong>:
+                    <ul>
+                        <li>Removed rows with null values in critical fields (<code>total_laid_off</code> and <code>percentage_laid_off</code>).</li>
+                        <li>Dropped unnecessary columns from the final table to streamline the dataset for analysis.</li>
+                    </ul>
+                </li>
+                <li><strong>Exploratory Data Analysis</strong>:
+                    <ul>
+                        <li>Conducted group by operations to summarize layoffs by company and by month.</li>
+                        <li>Created rolling totals to analyze layoffs over time.</li>
+                        <li>Generated rankings of companies based on the total number of layoffs per year to identify trends.</li>
+                    </ul>
+                </li>
+            </ol>
+            <p>
+                This structured approach not only ensured that the data was clean and reliable but also laid the groundwork for insightful analysis into trends and patterns in layoffs across various industries.
+            </p>
+        </div>
+
+        <div>
+            <h2>SQL Code for Data Cleaning</h2>
+            <pre>
+-- DATA CLEANING
+
+SELECT * 
+FROM layoffs;
+
+-- 1.Remove Duplicates
+-- 2.Standardize the data
+-- 3.Null values or blank values
+-- 4.Remove any columns
+
+-- 1. REMOVE Duplicates
+
+CREATE TABLE layoffs_staging
+LIKE layoffs;
+
+INSERT layoffs_staging
+SELECT *
+FROM layoffs;
+
+WITH duplicate_row AS
+(SELECT *,
+ROW_NUMBER()
+OVER(PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, 'date', stage, country, funds_raised_millions) AS row_num
+FROM layoffs_staging) 
+
+SELECT *
+FROM duplicate_row
+WHERE row_num > 1;
+
+DELETE
+FROM layoffs_staging3
+WHERE row_no > 1;
+
+-- 2.Standardize the data
+
+UPDATE layoffs_staging3
+SET company = TRIM(company);
+
+UPDATE layoffs_staging3
+SET industry = 'Crypto'
+WHERE industry LIKE 'Crypto%';
+
+UPDATE layoffs_staging3
+SET country = TRIM(TRAILING '.' FROM country)
+WHERE country LIKE 'United States%';
+
+UPDATE layoffs_staging3
+SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
+
+ALTER TABLE layoffs_staging3
+MODIFY COLUMN `date` DATE;
+
+-- 3.Null values or blank values
+
+UPDATE layoffs_staging3
+SET industry = NULL 
+WHERE industry = '';
+
+DELETE
+FROM layoffs_staging3
+WHERE total_laid_off IS NULL AND percentage_laid_off IS NULL;
+
+ALTER TABLE layoffs_staging3
+DROP COLUMN row_no;
+
+-- Exploratory Data Analysis
+
+SELECT *
+FROM layoffs_staging3;
+            </pre>
+        </div>
+    </div>
+</body>
+</html>
